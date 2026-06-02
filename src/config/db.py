@@ -1,7 +1,11 @@
-import sqlite3 
+import sqlite3
+from pathlib import Path
+
+DB_PATH = Path(__file__).resolve().parents[2] / "data" / "logs.db"
 
 def init_db():
-    conn = sqlite3.connect("data/logs.db")
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
     cursor.execute(''' 
@@ -17,7 +21,8 @@ def init_db():
     conn.close()
 
 def save_logs(timestamp, log_type, details, status):
-    conn = sqlite3.connect("data/logs.db")
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     cursor.execute('''

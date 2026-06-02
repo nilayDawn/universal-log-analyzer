@@ -53,6 +53,7 @@ htmlcov/
 Thumbs.db
 
 # Project-specific generated data
-data/
-pipeline/
+data/logs.db
+data/mock_app.log
+
 

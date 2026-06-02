@@ -4,3 +4,5 @@ scikit-learn
 pandas
 numpy
 requests
+sentence-transformers
+ipykernel
