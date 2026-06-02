@@ -1,7 +1,13 @@
+import re
 from fastapi import FastAPI, Request
 import uvicorn 
+from config.db import save_logs, init_db
+from utils.regex_parser import PATTERNS
+
+
 
 app = FastAPI(title= "Log Analyzer Processing Hub", version="0.0.1")
+init_db()
 
 @app.get("/")
 def health_check():
@@ -10,15 +16,29 @@ def health_check():
 @app.post("/api/logs")
 async def receive_logs(request: Request):
     payload = await request.json()
-    
+    log_line = ""
     #Log can be send in one line or at batch of lines. We will handle both cases.
     if isinstance(payload, list):
         for log in payload:
-            message = log.get("message", "Unknown payload")
-            print(f"[BATCH LOG] Received log: {message.strip()}")
+            log_line = log.get("message", "Unknown payload")
     else:
-        message = payload.get("message", "Unknown payload")
-        print(f"[SINGLE LOG] Received log: {message.strip()}")
+        log_line = payload.get("message", "Unknown payload")
+
+    #classification logic
+    for log_type, pattern in PATTERNS.items():
+        match = re.match(pattern, log_line)
+        if match:
+            data = match.groupdict()
+
+            timestamp = data.get("ts", "N/A")
+            status = data.get("status", "N/A")
+            details = str(data)
+
+            save_logs(timestamp, log_type, details, status)
+
+            print(f"Stored {log_type} log.")
+            break
+    
     return{
         "status": "success",
         "message": "Log(s) received and processed."
