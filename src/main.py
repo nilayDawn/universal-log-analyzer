@@ -7,7 +7,7 @@ app = FastAPI(title= "Log Analyzer Processing Hub", version="0.0.1")
 def health_check():
     return {"status": "ok", "message": "Welcome to the Log Analyzer Processing Hub!"}
 
-@app.post("/api/v1/logs")
+@app.post("/api/logs")
 async def receive_logs(request: Request):
     payload = await request.json()
     
