@@ -6,6 +6,8 @@
 ![Rust](https://img.shields.io/badge/Ingestion-Vector%20(Rust)-orange?logo=rust&logoColor=white)
 ![Machine Learning](https://img.shields.io/badge/ML-Scikit__Learn%20%7C%20Pandas-yellow?logo=scikit-learn&logoColor=black)
 ![LLM](https://img.shields.io/badge/Local%20AI-Llama%203%20(Ollama)-purple?logo=ollama&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Active%20Development-brightgreen)
+![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
 An enterprise-ready, localized telemetry pipeline that autonomously ingests distributed system logs, isolates multi-dimensional structural and behavioral anomalies using an unsupervised Machine Learning ensemble, and runs localized Generative AI for instant root-cause analysis—**with zero cloud dependencies and absolute data privacy.**
 
@@ -21,7 +23,31 @@ In modern cloud-native architectures, Site Reliability Engineering (SRE) and Sec
 3. **Localized Generative Diagnostics:** Restricts heavy Generative AI compute strictly to verified high-risk operational anomalies, utilizing an entirely offline, air-gapped Large Language Model to construct actionable mitigation runbooks.
 
 ---
+## 🎯 Motivation
 
+Modern observability platforms are often expensive, cloud-dependent, and difficult to deploy in privacy-sensitive environments.
+
+PARCE was created to demonstrate how modern telemetry pipelines, anomaly detection, and Generative AI can be combined into a fully self-hosted architecture that preserves data privacy while providing actionable operational intelligence.
+
+The project serves as both a practical observability platform and an engineering exploration of hybrid machine learning, local-first AI, and scalable telemetry processing.
+---
+## ✨ Architecture Highlights
+
+- Local-first AI observability platform
+- Rust-based ingestion with Vector
+- FastAPI event processing gateway
+- SQLite analytical storage layer
+- Hybrid anomaly detection ensemble
+- Offline LLM-powered root cause analysis
+- Fully containerized deployment stack
+- Zero cloud dependency architecture
+---
+## 📸 Dashboard Preview
+
+![Dashboard](docs/images/dashboard.png)
+
+*Real-time observability dashboard displaying ingestion metrics, anomaly detection results, and AI-generated root cause analyses.*
+---
 ## 🏗️ System Architecture & Data Lifecycle
 
 The engine is engineered as a decoupled, asynchronous microservice cluster orchestrated via Docker volumes and isolated virtual networks.
@@ -79,7 +105,7 @@ graph TD
 
 ---
 
-## 📂 Production Directory Layout
+## 📂 Directory Layout
 
 ```text
 .
@@ -118,7 +144,7 @@ graph TD
 
 ---
 
-## 🚀 Accelerated Local Deployment
+## 🚀 Local Deployment
 
 ### Hardware Pre-requisites
 
@@ -175,10 +201,62 @@ Once the startup logs stabilize, open your browser and navigate to the live comm
 * [ ] **Edge Deployment Optimization:** Fine-tune specialized Small Language Models (SLMs) such as Microsoft Phi-3 to replace Llama 3 on low-compute edge gateways.
 
 ---
+## 🤝 Contributing
 
+Contributions are welcome and greatly appreciated.
+
+Whether you're interested in improving the machine learning pipeline, enhancing the dashboard experience, optimizing ingestion performance, expanding documentation, or reporting bugs, your involvement helps make PARCE more robust and useful for the broader engineering community.
+
+### How to Contribute
+
+1. Fork the repository.
+2. Create a feature branch.
+
+```bash
+git checkout -b feature/amazing-feature
+```
+
+3. Commit your changes.
+
+```bash
+git commit -m "Add amazing feature"
+```
+
+4. Push the branch.
+
+```bash
+git push origin feature/amazing-feature
+```
+
+5. Open a Pull Request.
+
+### Contribution Guidelines
+
+* Follow existing project structure and coding conventions.
+* Write clear commit messages.
+* Add documentation for any significant feature changes.
+* Keep pull requests focused and reasonably scoped.
+* Ensure all tests and validation pipelines pass before submission.
+
+### Areas Looking for Contributions
+
+* Advanced anomaly detection algorithms
+* Dashboard visualizations
+* Kafka integration
+* OpenTelemetry support
+* Additional log parsers
+* Model benchmarking and evaluation
+* Performance optimization
+* Documentation improvements
+
+By contributing, you agree that your contributions will be licensed under the same Apache License 2.0 used by this project.
+
+
+---
 ## License
 
 This project is licensed under the Apache License 2.0.
 
 Copyright (c) 2026 Nilay Dawn.
 
+---
