@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
 from sentence_transformers import SentenceTransformer
+import warnings
+warnings.filterwarnings("ignore")
 
 model = SentenceTransformer(
     'all-MiniLM-L6-v2'

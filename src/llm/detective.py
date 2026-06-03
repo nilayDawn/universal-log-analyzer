@@ -4,7 +4,7 @@ import sys
 
 # Default Ollama local endpoint
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "llama3" 
+MODEL_NAME = "llama3:latest" 
 
 def get_log_by_id(log_id):
     conn = sqlite3.connect("data/logs.db")

@@ -1,12 +1,8 @@
-from pathlib import Path
 import re
-import sys
-
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from fastapi import FastAPI, Request
-import uvicorn 
+import uvicorn
+
 from src.config.db import save_logs, init_db
 from src.utils.regex_parser import PATTERNS
 

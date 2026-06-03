@@ -1,13 +1,8 @@
-from pathlib import Path
-import sys
-
-if __package__ in (None, ""):
-    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-
 from src.utils.load_data import load_data
-from src.ml.semantic_detector import run_semantic_detector
-from src.ml.behavioral_detector import run_behavioral_detector
-from src.ml.aggregate_scores import aggregate_scores
+from .semantic_detector import run_semantic_detector
+from .behavioral_detector import run_behavioral_detector
+from .aggregate_scores import aggregate_scores
+from src.llm.detective import analyze_anomaly
 
 def main():
     df = load_data()
@@ -53,6 +48,10 @@ def main():
                 print("   -> Trigger: Unusual Semantic Pattern")
             if row['behavioral_pred'] == -1:
                 print("   -> Trigger: Unusual Behavioral Metadata")
+            
+            if row['risk_level'] == 'High Risk':
+                print(f"\n AUTOMATIC TRIGGER: Initiating Root Cause Ananlysis for Log ID: {row['id']}")
+                analyze_anomaly(row['id'])
 
 if __name__ == "__main__":
     main()
