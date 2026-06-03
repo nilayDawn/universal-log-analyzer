@@ -1,0 +1,57 @@
+services:
+  # 1. Local AI Engine (Using your existing image name)
+  ollama-llm:
+    image: ollama/ollama:latest
+    container_name: ollama-llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # 2. FastAPI Ingestion Server
+  fastapi:
+    build: .
+    container_name: analyzer-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    command: python src/main.py
+    depends_on:
+      - ollama-llm
+
+  # 3. Rust-based Log Shipper
+  vector:
+    build: .
+    container_name: analyzer-vector
+    volumes:
+      - .:/app
+    command: vector --config pipeline/vector.yaml
+    depends_on:
+      - fastapi
+
+  # 4. Mock Production Traffic Generator
+  generator:
+    build: .
+    container_name: analyzer-generator
+    volumes:
+      - .:/app
+    command: python scripts/generator.py
+    depends_on:
+      - fastapi
+
+  # 5. Real-Time Analytics Command Center
+  dashboard:
+    build: .
+    container_name: analyzer-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    command: streamlit run src/dashboard/app.py --server.port=8501 --server.address=0.0.0.0
+    depends_on:
+      - fastapi
+      - ollama-llm
+
+volumes:
+  ollama_data:

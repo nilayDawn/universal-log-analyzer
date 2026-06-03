@@ -1,0 +1,11 @@
+.venv
+.git
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.log
+.ipynb_checkpoints
+data/vector_state
+data/logs.db
+ml/research.ipynb
