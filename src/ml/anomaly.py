@@ -1,3 +1,9 @@
+# Copyright 2026 Nilay Dawn
+#
+# Licensed under the Apache License, Version 2.0
+# http://www.apache.org/licenses/LICENSE-2.0
+
+
 from src.utils.load_data import load_data
 from .semantic_detector import run_semantic_detector
 from .behavioral_detector import run_behavioral_detector

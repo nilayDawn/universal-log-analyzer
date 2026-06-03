@@ -55,3 +55,6 @@ Thumbs.db
 # Project-specific generated data
 data/
 
+Dockerfile
+docker-compose.yml
+.dockerignore
