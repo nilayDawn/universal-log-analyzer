@@ -77,3 +77,12 @@ def get_log_by_id(log_id):
     conn.close()
     return row
 
+
+def get_total_logs_count():
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM logs")
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
+

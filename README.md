@@ -44,7 +44,7 @@ The project serves as both a practical observability platform and an engineering
 ---
 ## 📸 Dashboard Preview
 
-![Dashboard](docs/images/dashboard.png)
+![Dashboard](public/images/dashboard.png)
 
 *Real-time observability dashboard displaying ingestion metrics, anomaly detection results, and AI-generated root cause analyses.*
 ---
@@ -54,23 +54,38 @@ The engine is engineered as a decoupled, asynchronous microservice cluster orche
 
 ```mermaid
 graph TD
-    A[Synthetic Live Production Environment] -->|Continuous Stream| B(Vector - Rust Log Shipper)
-    B -->|Asynchronous HTTP POST Batches| C[FastAPI Ingestion Gateway]
-    C -->|Regex Parsing & Normalization| D[(SQLite Central Data Warehouse)]
-    D -->|Feature Engineering Pipeline| E{Dual-Engine ML Ensemble}
-    
-    E -->|Semantic Context Space| F[SentenceTransformers + PCA + Isolation Forest]
-    E -->|Behavioral Windowing| G[Rolling Time-Series + Isolation Forest]
-    
-    F --> H[Hybrid Logic Aggregator & Heuristic Filter]
+
+    A[Synthetic Live Production Environment]
+    B[Vector - Rust Log Shipper]
+    C[FastAPI Ingestion Gateway]
+    D[(SQLite Central Data Warehouse)]
+
+    E{Dual Engine ML Ensemble}
+
+    F[SentenceTransformers + PCA + Isolation Forest]
+    G[Rolling Time Series + Isolation Forest]
+
+    H[Hybrid Logic Aggregator and Heuristic Filter]
+
+    I[Streamlit Interactive Command Center]
+    J[Ollama Llama 3 Engine]
+
+    A -->|Continuous Stream| B
+    B -->|Asynchronous HTTP POST Batches| C
+    C -->|Regex Parsing and Normalization| D
+    D -->|Feature Engineering Pipeline| E
+
+    E -->|Semantic Context Space| F
+    E -->|Behavioral Windowing| G
+
+    F --> H
     G --> H
-    
-    H -->|Operational Logs: Normal / Med Risk| I[Streamlit Interactive Command Center]
-    H -->|Verified Threat: High Risk Payload| J[Ollama Llama 3 Engine]
-    J -->|Automated Root-Cause Diagnostic| I
 
+    H -->|Operational Logs - Normal or Medium Risk| I
+    H -->|Verified Threat - High Risk Payload| J
+
+    J -->|Automated Root Cause Diagnostic| I
 ```
-
 ### The 5 Ingestion and Analytical Tiers
 
 * **Tier 1: High-Performance Shipping:** A native Rust Vector agent continuously tails system log buffers, tracking file state via local cryptographic checkpoints to enforce strict write idempotency.
@@ -106,6 +121,21 @@ graph TD
   2. **Exploit Signature Overrides:** Scans parsed anomalies for explicit zero-day payloads (e.g., `"union select"`, `"../"`, `"cmd.exe"`). If found, the pipeline bypasses statistical thresholds and instantly escalates the event to `High Risk`.
   3. **Context-Aware Correlation:** Escalates `Medium Risk` anomalies to `High Risk` only when severe velocity anomalies correlate strongly with system failure statuses (e.g., brute-force triggering `401 Unauthorized` or payload execution triggering `500 Internal Server Error`).
 
+### 5. Non-blocking Asynchronous API Gateway
+
+* **The Challenge:** The ML feature pipeline and Generative AI (Llama 3) analysis are highly CPU-bound. If executed directly on FastAPI's main synchronous thread, they block Uvicorn's event loop entirely, starving concurrent log ingestion endpoints and causing dashboard request timeouts.
+* **The Solution:** Offloaded all synchronous CPU/network heavy operations to separate thread pools using Python's `asyncio.to_thread`. Coupled with an asynchronous lock (`asyncio.Lock()`), this prevents concurrent anomaly recalculations from piling up while ensuring log ingestion (`POST /api/logs`) remains fully non-blocking and processes in sub-millisecond durations.
+
+### 6. Local Model Cache Persistence
+
+* **The Problem:** The SentenceTransformer weights (`all-MiniLM-L6-v2`) must be loaded at backend startup. Without host mapping, recreating the backend docker container wipes out `/root/.cache`, forcing a complete network re-download and triggering rate-limit warning messages.
+* **The Fix:** Configured a persistent named volume `hf-cache` mapping to `/root/.cache`. This caches model weights and tokenizer configurations permanently, dropping container restart times to zero and enabling completely air-gapped, offline operational capability.
+
+### 7. Sliding Ingestion Windows with Global Metrics
+
+* **The Optimization:** Querying the complete SQLite database to run Isolation Forest calculations degrades linearly in performance as database size grows.
+* **The Architecture:** Configured the ML feature pipeline to query and process only a sliding window of the latest `1,000` logs. To prevent dashboard metrics from appearing static, added a dedicated `get_total_logs_count()` query to retrieve and display the actual, ever-increasing database total log volume while maintaining bounded execution speeds.
+
 ---
 
 ## 📂 Directory Layout
@@ -119,8 +149,7 @@ graph TD
 │       └── tail_mock_logs
 │           └── checkpoints.json
 ├── docker-compose.yml
-├── Dockerfile.backend
-├── Dockerfile.dashboard
+├── Dockerfile
 ├── LICENSE
 ├── NOTEBOOK
 │   └── research.ipynb
@@ -149,7 +178,6 @@ graph TD
 │       ├── load_data.py
 │       └── regex_parser.py
 └── uv.lock
-
 ```
 
 

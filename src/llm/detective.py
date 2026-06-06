@@ -45,6 +45,10 @@ Keep your response highly technical, concise, and format it with clear headers. 
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": False,
+        "options": {
+            "num_predict": 150,
+            "temperature": 0.2
+        }
     }
 
     try:

@@ -100,9 +100,9 @@ def check_api_health():
         return False
 
 # --- Helper: Fetch ML Results ---
-@st.cache_data(ttl=5) # Real-time sync every 5 seconds
+@st.cache_data(ttl=15) # Real-time sync every 5 seconds
 def fetch_analyzed_data():
-    response = requests.get(f"{BACKEND_API_URL}/api/anomalies", timeout=10)
+    response = requests.get(f"{BACKEND_API_URL}/api/anomalies", timeout=30)
     response.raise_for_status()
     payload = response.json()
     return pd.DataFrame(payload.get("logs", [])), payload.get("summary", {})
@@ -150,7 +150,7 @@ if df.empty:
 else:
     # 1. TOP KPI METRICS
     col1, col2, col3, col4 = st.columns(4)
-    total_logs = len(df)
+    total_logs = summary.get("total_logs", len(df))
     high_risk = len(df[df['risk_level'] == 'High Risk'])
     medium_risk = len(df[df['risk_level'] == 'Medium Risk'])
     anomaly_rate = f"{( (high_risk + medium_risk) / total_logs * 100 ):.1f}%" if total_logs > 0 else "0.0%"
@@ -200,55 +200,60 @@ else:
             st.markdown("### 🧠 AI Root Cause Detective")
             st.markdown("Request a secure LLM analysis of any flagged anomaly to trace its behavior.")
             
-            # Selectbox includes both High and Medium risks
-            flagged_logs = risks_df.to_dict('records')
-            options = {f"ID {x['id']} [{x['risk_level']}] - {x['log_type']} - {x['timestamp']}": x for x in flagged_logs}
+            # Filter to ONLY High Risk logs for AI analysis
+            high_risk_df = risks_df[risks_df['risk_level'] == 'High Risk']
             
-            selected_option = st.selectbox("Select flagged anomaly to inspect:", list(options.keys()))
-            
-            if selected_option:
-                log_data = options[selected_option]
+            if high_risk_df.empty:
+                st.info("No High Risk logs available for AI Root Cause Analysis.")
+            else:
+                high_risk_logs = high_risk_df.to_dict('records')
+                options = {f"ID {x['id']} [{x['risk_level']}] - {x['log_type']} - {x['timestamp']}": x for x in high_risk_logs}
                 
-                # Show parsed details inside a clean JSON viewer
-                with st.expander("🔍 Inspect Anomaly Metadata & Features", expanded=True):
-                    inspect_col1, inspect_col2 = st.columns(2)
-                    with inspect_col1:
-                        st.markdown("**Core Properties**")
-                        st.json({
-                            "Log ID": log_data["id"],
-                            "Timestamp": log_data["timestamp"],
-                            "Log Type": log_data["log_type"],
-                            "Status Code": log_data["status"],
-                            "Risk Level": log_data["risk_level"]
-                        })
-                    with inspect_col2:
-                        st.markdown("**ML Feature Space**")
-                        st.json({
-                            "Traffic Velocity (10s)": log_data.get("velocity_10s", 0),
-                            "Semantic Isolation Pred": log_data.get("semantic_pred", 0),
-                            "Behavioral Isolation Pred": log_data.get("behavioral_pred", 0),
-                            "Raw Message": log_data["details"]
-                        })
+                selected_option = st.selectbox("Select flagged High Risk anomaly to inspect:", list(options.keys()))
                 
-                # Button to generate root cause analysis
-                if st.button("🚀 Analyze Anomaly with Llama 3", type="primary"):
-                    with st.spinner(f"Querying local Llama 3 for diagnosis on Log ID {log_data['id']}..."):
-                        try:
-                            response = requests.post(
-                                f"{BACKEND_API_URL}/api/anomalies/{log_data['id']}/analysis",
-                                timeout=60,
-                            )
-                            response.raise_for_status()
-                            st.success("Investigation Report Complete!")
-                            
-                            # Render report beautifully using Markdown
-                            st.markdown("#### 📋 Diagnostic Report")
-                            st.markdown(
-                                f"<div class='custom-card'>{response.json().get('analysis', '')}</div>", 
-                                unsafe_allow_html=True
-                            )
-                        except Exception as e:
-                            st.error(f"Failed to generate root cause analysis: {e}")
+                if selected_option:
+                    log_data = options[selected_option]
+                
+                    # Show parsed details inside a clean JSON viewer
+                    with st.expander("🔍 Inspect Anomaly Metadata & Features", expanded=True):
+                        inspect_col1, inspect_col2 = st.columns(2)
+                        with inspect_col1:
+                            st.markdown("**Core Properties**")
+                            st.json({
+                                "Log ID": log_data["id"],
+                                "Timestamp": log_data["timestamp"],
+                                "Log Type": log_data["log_type"],
+                                "Status Code": log_data["status"],
+                                "Risk Level": log_data["risk_level"]
+                            })
+                        with inspect_col2:
+                            st.markdown("**ML Feature Space**")
+                            st.json({
+                                "Traffic Velocity (10s)": log_data.get("velocity_10s", 0),
+                                "Semantic Isolation Pred": log_data.get("semantic_pred", 0),
+                                "Behavioral Isolation Pred": log_data.get("behavioral_pred", 0),
+                                "Raw Message": log_data["details"]
+                            })
+                    
+                    # Button to generate root cause analysis
+                    if st.button("🚀 Analyze Anomaly with Llama 3", type="primary"):
+                        with st.spinner(f"Querying local Llama 3 for diagnosis on Log ID {log_data['id']}..."):
+                            try:
+                                response = requests.post(
+                                    f"{BACKEND_API_URL}/api/anomalies/{log_data['id']}/analysis",
+                                    timeout=120,
+                                )
+                                response.raise_for_status()
+                                st.success("Investigation Report Complete!")
+                                
+                                # Render report beautifully using Markdown
+                                st.markdown("#### 📋 Diagnostic Report")
+                                st.markdown(
+                                    f"<div class='custom-card'>{response.json().get('analysis', '')}</div>", 
+                                    unsafe_allow_html=True
+                                )
+                            except Exception as e:
+                                st.error(f"Failed to generate root cause analysis: {e}")
 
     with tab2:
         st.subheader("Security Event Analytics")

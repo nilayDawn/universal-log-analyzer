@@ -15,6 +15,9 @@ services:
       - pipeline-net
       - web-net
       - ai-net
+    volumes:
+      - ./data:/app/data
+      - hf-cache:/root/.cache
 
   # 2. Local AI Engine (Isolated)
   ollama:
@@ -66,6 +69,7 @@ services:
 volumes:
   shared-data:
   ollama-data:
+  hf-cache:
 
 networks:
   pipeline-net:

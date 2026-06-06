@@ -5,6 +5,7 @@
 
 
 from src.utils.load_data import load_data
+from src.config.db import get_total_logs_count
 from .semantic_detector import run_semantic_detector
 from .behavioral_detector import run_behavioral_detector
 from .aggregate_scores import aggregate_scores
@@ -14,11 +15,12 @@ MIN_BASELINE_LOGS = 25
 
 def run_anomaly_pipeline(min_logs=MIN_BASELINE_LOGS):
     df = load_data()
+    total_db_logs = get_total_logs_count()
     if len(df) < min_logs:
         return df, {
             "baseline_ready": False,
             "min_logs": min_logs,
-            "total_logs": len(df),
+            "total_logs": total_db_logs,
             "high_risk": 0,
             "medium_risk": 0,
             "message": "Waiting for enough logs to build a baseline.",
@@ -37,7 +39,7 @@ def run_anomaly_pipeline(min_logs=MIN_BASELINE_LOGS):
     summary = {
         "baseline_ready": True,
         "min_logs": min_logs,
-        "total_logs": len(df),
+        "total_logs": total_db_logs,
         "high_risk": int((df['risk_level'] == 'High Risk').sum()),
         "medium_risk": int((df['risk_level'] == 'Medium Risk').sum()),
         "message": "Anomaly pipeline completed.",

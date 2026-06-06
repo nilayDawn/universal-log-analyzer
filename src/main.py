@@ -7,6 +7,7 @@
 import re
 import os
 import json
+import asyncio
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
@@ -21,6 +22,9 @@ from src.ml.anomaly import MIN_BASELINE_LOGS, run_anomaly_pipeline
 from src.utils.regex_parser import PATTERNS
 
 logger = logging.getLogger(__name__)
+
+# Global lock: prevents concurrent ML pipeline runs from stacking up and starving the event loop.
+_pipeline_lock = asyncio.Lock()
 
 
 
@@ -114,8 +118,12 @@ async def receive_logs(request: Request):
 
 
 @app.get("/api/anomalies")
-def get_anomalies(min_logs: int = MIN_BASELINE_LOGS):
-    df, summary = run_anomaly_pipeline(min_logs=min_logs)
+async def get_anomalies(min_logs: int = MIN_BASELINE_LOGS):
+    # Acquire lock: if a pipeline run is already in progress, wait instead of spawning a second one.
+    async with _pipeline_lock:
+        # Run the CPU-heavy ML pipeline in a thread pool so the event loop stays responsive.
+        df, summary = await asyncio.to_thread(run_anomaly_pipeline, min_logs)
+
     if not summary["baseline_ready"]:
         return {
             "status": "warming_up",
@@ -138,8 +146,9 @@ def get_anomalies(min_logs: int = MIN_BASELINE_LOGS):
 
 
 @app.post("/api/anomalies/{log_id}/analysis")
-def generate_root_cause_analysis(log_id: int):
-    analysis = analyze_anomaly(log_id)
+async def generate_root_cause_analysis(log_id: int):
+    # Run the blocking LLM call in a thread pool as well.
+    analysis = await asyncio.to_thread(analyze_anomaly, log_id)
     if analysis is None:
         raise HTTPException(
             status_code=404,
