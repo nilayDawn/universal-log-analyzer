@@ -8,31 +8,47 @@ from src.utils.load_data import load_data
 from .semantic_detector import run_semantic_detector
 from .behavioral_detector import run_behavioral_detector
 from .aggregate_scores import aggregate_scores
-from src.llm.detective import analyze_anomaly
 
-def main():
+MIN_BASELINE_LOGS = 25
+
+
+def run_anomaly_pipeline(min_logs=MIN_BASELINE_LOGS):
     df = load_data()
-    if len(df) < 50:  # Arbitrary threshold for minimum data
-        print("⚠️ Waiting for more logs to train PCA effectively...")
-        return
-        
-    # Run Detectors
+    if len(df) < min_logs:
+        return df, {
+            "baseline_ready": False,
+            "min_logs": min_logs,
+            "total_logs": len(df),
+            "high_risk": 0,
+            "medium_risk": 0,
+            "message": "Waiting for enough logs to build a baseline.",
+        }
+
+    df = df.copy()
     df['semantic_pred'] = run_semantic_detector(df)
     df['behavioral_pred'] = run_behavioral_detector(df)
 
-    # # Debug: Print predictions
-    # print("\n🔍 Semantic Detector Predictions:")
-    # print(df['semantic_pred'].value_counts())
-    # print("\n🔍 Behavioral Detector Predictions:")
-    # print(df['behavioral_pred'].value_counts())
+    # risk aggregation
+    df['risk_level'] = [
+        aggregate_scores(row)
+        for _, row in df.iterrows()
+    ]
     
-    
-    
-    # Aggregate
-    df['risk_level'] = df.apply(aggregate_scores, axis=1)
-    
-    # print("\n🔍 Risk Level:")
-    # print(df['risk_level'])
+    summary = {
+        "baseline_ready": True,
+        "min_logs": min_logs,
+        "total_logs": len(df),
+        "high_risk": int((df['risk_level'] == 'High Risk').sum()),
+        "medium_risk": int((df['risk_level'] == 'Medium Risk').sum()),
+        "message": "Anomaly pipeline completed.",
+    }
+    return df, summary
+
+def main():
+    df, summary = run_anomaly_pipeline(min_logs=50)
+    if not summary["baseline_ready"]:
+        print("⚠️ Waiting for more logs to train PCA effectively...")
+        return
     
     # Filter and Display Results
     risks = df[df['risk_level'] != 'Normal']
@@ -56,8 +72,8 @@ def main():
                 print("   -> Trigger: Unusual Behavioral Metadata")
             
             if row['risk_level'] == 'High Risk':
-                print(f"\n AUTOMATIC TRIGGER: Initiating Root Cause Ananlysis for Log ID: {row['id']}")
-                analyze_anomaly(row['id'])
+                print(f"\n High Risk Log ID {row['id']} is ready for root cause analysis via the FastAPI endpoint.")
 
+            
 if __name__ == "__main__":
     main()

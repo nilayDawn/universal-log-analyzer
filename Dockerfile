@@ -1,23 +1,31 @@
 FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y curl build-essential bash && \
-    curl -1sLf https://sh.vector.dev | bash -s -- -y && \
-    apt-get clean
+# 1. Optimize environment configurations
+ENV UV_COMPILE_BYTECODE=1
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONPATH=/app
 
-ENV PATH="/root/.vector/bin:${PATH}"
+# 2. Install lightweight system utilities
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# 3. FAST INJECTION: Grab the pre-compiled uv binary directly
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# 4. Copy dependency architecture files
 COPY pyproject.toml uv.lock ./
 
-RUN pip install --no-cache-dir uv
+# 5. CACHE LAYER: Install external libraries only (ignores dev dependencies)
+RUN uv sync --frozen --no-install-project --no-dev
 
-RUN uv sync --frozen --no-install-project
-
+# 6. Copy application source code
 COPY . .
 
-RUN uv sync --frozen
+# 7. FINAL LAYER: Complete project tracking and registration
+RUN uv sync --frozen --no-dev
 
-ENV PYTHONPATH=/app
-
-CMD ["uv", "run", "python", "-m", "src.main"]
+CMD ["python", "src/main.py"]

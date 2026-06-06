@@ -100,8 +100,11 @@ graph TD
 
 ### 4. Hybrid Machine Learning vs. Pure Unsupervised Deep Learning
 
-* **The Architecture:** Deployed an Isolation Forest combined with an explicit **Domain Heuristic Override Layer** (Method 2) rather than a pure deep learning autoencoder.
-* **The Rationale:** In cybersecurity, explainability is a hard requirement. Pure neural network anomaly scores act as a black box. By utilizing a hybrid model, the system flags statistical deviations but filters out normal behavior (such as high-velocity `HTTP 200 SUCCESS` logs during an application launch or load test) using clear operational logic, lowering false-positive rates by over 93%.
+* **The Architecture:** Deployed an Isolation Forest combined with a deterministic **Multi-Factor Threat Aggregation Matrix** rather than a pure deep learning autoencoder.
+* **The Rationale:** In cybersecurity, explainability is a hard requirement. Pure neural network anomaly scores act as a black box. By utilizing a hybrid model, the system leverages Isolation Forests to flag statistical deviations, but strictly validates them using deterministic enterprise rules:
+  1. **False-Positive Suppression:** Automatically downgrades statistical traffic spikes to `Normal` if the application returns a healthy `HTTP 200 SUCCESS`, lowering false-positive alert fatigue by over 93%.
+  2. **Exploit Signature Overrides:** Scans parsed anomalies for explicit zero-day payloads (e.g., `"union select"`, `"../"`, `"cmd.exe"`). If found, the pipeline bypasses statistical thresholds and instantly escalates the event to `High Risk`.
+  3. **Context-Aware Correlation:** Escalates `Medium Risk` anomalies to `High Risk` only when severe velocity anomalies correlate strongly with system failure statuses (e.g., brute-force triggering `401 Unauthorized` or payload execution triggering `500 Internal Server Error`).
 
 ---
 
@@ -109,38 +112,46 @@ graph TD
 
 ```text
 .
-├── data/                       # Local volume mounts for state persistence
-│   ├── logs.db                 # Central SQLite data warehouse
-│   ├── mock_app.log            # Target log stream under active observation
-│   └── vector_state/           # Vector ingestion checkpoint ledger
-├── pipeline/
-│   └── vector.yaml             # Rust observation agent pipeline manifest
-├── scripts/
-│   └── generator.py            # Simulated enterprise application script
-├── src/
-│   ├── config/
-│   │   └── db.py               # Thread-safe database initialization 
-│   ├── dashboard/
-│   │   └── app.py              # Real-time Streamlit SRE visualization core
-│   ├── llm/
-│   │   └── detective.py        # Local Ollama REST client implementation
-│   ├── main.py                 # FastAPI production application gateway
-│   ├── ml/
-│   │   ├── aggregate_scores.py # Heuristic validation & false-positive suppression
-│   │   ├── anomaly.py          # Operational pipeline orchestration orchestrator
-│   │   ├── behavioral_detector.py # Time-series rolling window feature extractor
-│   │   ├── research.ipynb      # Experimental exploratory data analysis (EDA) workspace
-│   │   └── semantic_detector.py   # Transformer embedding & dimensional reduction pipeline
-│   └── utils/
-│       ├── load_data.py        # Optimized relational ingestion handlers
-│       └── regex_parser.py     # Unstructured log string transformation logic
-├── Dockerfile                  # Optimized Python environment configuration
-├── docker-compose.yml          # Unified multi-container stack orchestrator
-├── requirements.txt            # Locked explicit package dependencies
-├── pyproject.toml              # Modern Python package meta-configuration
-└── uv.lock                     # Deterministic dependency resolution tracking
+├── data
+│   ├── logs.db
+│   ├── mock_app.log
+│   └── vector_state
+│       └── tail_mock_logs
+│           └── checkpoints.json
+├── docker-compose.yml
+├── Dockerfile.backend
+├── Dockerfile.dashboard
+├── LICENSE
+├── NOTEBOOK
+│   └── research.ipynb
+├── NOTICE
+├── pipeline
+│   └── vector.yaml
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── scripts
+│   └── generator.py
+├── src
+│   ├── config
+│   │   ├── db.py
+│   ├── dashboard
+│   │   ├── app.py
+│   ├── llm
+│   │   ├── detective.py
+│   ├── main.py
+│   ├── ml
+│   │   ├── aggregate_scores.py
+│   │   ├── anomaly.py
+│   │   ├── behavioral_detector.py
+│   │   └── semantic_detector.py
+│   └── utils
+│       ├── load_data.py
+│       └── regex_parser.py
+└── uv.lock
 
 ```
+
 
 ---
 
@@ -172,12 +183,21 @@ docker rm parce-setup
 
 Execute the environment cluster compilation directly via your terminal:
 
-```powershell
-docker compose up --build
-
+```bash
+docker compose up --build -d
 ```
 
-This single instruction automatically compiles the custom Python environment, spins up the independent streaming agent, connects the database hub, mounts active host directories, and initializes the monitoring components.
+**Note:** Vector natively ships logs to the backend container using Docker service discovery via the `http://backend:8000` endpoint.
+
+- **Docker-compose (recommended):** No changes required. It automatically handles networking between Vector, FastAPI Backend, Streamlit Dashboard, and Ollama.
+- **Local dev outside Docker (no Docker network):**
+  1) Start the backend locally (e.g., `http://127.0.0.1:8000`).
+  2) Update `pipeline/vector.yaml`:
+     - Change the sink target `uri` to your host: `"http://127.0.0.1:8000/api/logs"`
+     - Update `data_dir` to `"/var/lib/vector"` or a persistent local folder so Vector checkpoints survive restarts.
+     - Update `include` paths to match your local repository format (e.g., `"data/mock_app.log"`).
+
+This single instruction compiles the optimized Python multi-stage environment, spins up the independent Rust streaming agent, connects the database hub, mounts active volumes, and initializes the command center dashboard.
 
 ### Step 3: Accessing the Systems Dashboard
 

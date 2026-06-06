@@ -45,7 +45,7 @@ try:
             f.write(log_line)
             
         # Wait a random fraction of a second before creating the next log line
-        time.sleep(random.uniform(0.5, 0.9))
+        time.sleep(random.uniform(0.5, 2.0))
 
 except KeyboardInterrupt:
     print("\n🛑 Simulator stopped gracefully.")

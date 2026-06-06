@@ -1,8 +1,14 @@
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def run_behavioral_detector(df):
-    print("⏳ Running Detector 2: Behavioral Pipeline (Metadata + Velocity)...")
+    logger.info("Running Detector 2: Behavioral Pipeline (Metadata + Velocity)...")
+
 
     # 1. Feature extraction
     df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
@@ -13,24 +19,19 @@ def run_behavioral_detector(df):
     valid_mask = df['timestamp'].notna()
     valid_df = df[valid_mask].copy()
   
-    # Sort chronologically and explicitly set 'id' as the index
-    valid_df = valid_df.sort_values(['timestamp', 'id']).set_index('id')
+    # Sort by group and timestamp to ensure alignment with rolling output
+    valid_df = valid_df.sort_values(['log_type', 'timestamp'])
     
-    # Calculate velocity
-    velocity = valid_df.groupby('log_type').rolling('10s', on='timestamp')['hour'].count()
+    # Calculate velocity using a DatetimeIndex
+    valid_df_indexed = valid_df.set_index('timestamp')
+    velocity = valid_df_indexed.groupby('log_type')['hour'].rolling('10s').count()
     
-    # Drop the 'log_type' group label, leaving a Series where the index is the unique 'id'
-    velocity_series = velocity.reset_index(level=0, drop=True)
+    # Assign rolling counts back to sorted valid_df
+    valid_df['velocity_10s'] = velocity.values
     
-  
- 
-    # Strips out any duplicate indices caused by dirty SQLite data or Pandas bugs,
-    # ensuring the .map() function never crashes.
-    
-    velocity_series = velocity_series[~velocity_series.index.duplicated(keep='last')]
-    
-    # Step E: Map the velocities back to the main DataFrame safely!
-    df['velocity_10s'] = df['id'].map(velocity_series).fillna(0)
+    # Map the velocities back to the main DataFrame via ID
+    velocity_map = dict(zip(valid_df['id'], valid_df['velocity_10s']))
+    df['velocity_10s'] = df['id'].map(velocity_map).fillna(0)
 
     # 3. Encode categorical features (One-Hot Encoding)
     ohe_features = pd.get_dummies(df[['log_type', 'status']], drop_first=False).astype(int)

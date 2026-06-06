@@ -1,31 +1,32 @@
-import sqlite3
-import requests
+import logging
+import os
 import sys
 
-# Default Ollama local endpoint
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "llama3:latest" 
+import requests
+from dotenv import load_dotenv
 
-def get_log_by_id(log_id):
-    conn = sqlite3.connect("data/logs.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT log_type, timestamp, details FROM logs WHERE id = ?", (log_id,))
-    row = cursor.fetchone()
-    conn.close()
-    return row
+from src.config.db import get_log_by_id
 
-def analyze_anomaly(log_id):
+load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+# Default Ollama local endpoint. Docker overrides OLLAMA_URL with the service name.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate").strip().strip('"')
+MODEL_NAME = os.getenv("MODEL_NAME", "llama3:latest").strip().strip('"')
+
+
+def analyze_anomaly(log_id: int):
     log_data = get_log_by_id(log_id)
     if not log_data:
-        print(f"❌ Log ID {log_id} not found in database.")
-        return
+        logger.warning("Log ID %s not found in database.", log_id)
+        return None
 
     log_type, timestamp, details = log_data
-    
-    # The System Prompt configuring the LLM's behavior
+
     prompt = f"""
 You are an expert System Administrator and Cybersecurity Analyst.
-Our machine learning anomaly detection ensemble has flagged the following log as a HIGH RISK event. 
+Our machine learning anomaly detection ensemble has flagged the following log as a HIGH RISK event.
 
 Log Type: {log_type}
 Timestamp: {timestamp}
@@ -37,32 +38,31 @@ Please provide:
 
 Keep your response highly technical, concise, and format it with clear headers. Do not use filler words.
 """
-    
-    print(f"🕵️  Sending Log ID {log_id} to Local LLM ({MODEL_NAME})...\n")
-    
+
+    logger.info("Sending log_id=%s to Local LLM model=%s", log_id, MODEL_NAME)
+
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": False
+        "stream": False,
     }
-    
+
     try:
-        response = requests.post(OLLAMA_URL, json=payload)
+        response = requests.post(OLLAMA_URL, json=payload, timeout=120)
         response.raise_for_status()
         result = response.json()
-        
-        print("==================================================")
-        print("💡 LLM ROOT CAUSE ANALYSIS")
-        print("==================================================")
-        print(result.get("response", "No response provided."))
-        print("==================================================\n")
-        
+        return result.get("response", "No response provided.")
     except requests.exceptions.ConnectionError:
-        print("❌ Failed to connect to Ollama. Ensure the Ollama app is running in the background.")
-    except Exception as e:
-        print(f"❌ An error occurred: {e}")
+        logger.error("Failed to connect to Ollama at %s", OLLAMA_URL)
+        return None
+    except Exception:
+        logger.exception("Error occurred while analyzing anomaly (log_id=%s)", log_id)
+        return None
+
 
 if __name__ == "__main__":
+    logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+
     if len(sys.argv) > 1:
         try:
             target_id = int(sys.argv[1])
@@ -71,3 +71,4 @@ if __name__ == "__main__":
             print("Please provide a valid numeric Log ID.")
     else:
         print("Usage: python src/llm/detective.py <log_id>")
+

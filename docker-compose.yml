@@ -1,57 +1,76 @@
 services:
-  # 1. Local AI Engine (Using your existing image name)
-  ollama-llm:
+  # 1. FastAPI Ingestion Server (Acts as the bridge)
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    command: python src/main.py
+    environment:
+      - LOG_LEVEL=INFO
+      - FRONTEND_ORIGINS=*
+      - OLLAMA_URL=http://ollama:11434/api/generate
+    depends_on:
+      - ollama
+    networks:
+      - pipeline-net
+      - web-net
+      - ai-net
+
+  # 2. Local AI Engine (Isolated)
+  ollama:
     image: ollama/ollama:latest
-    container_name: ollama-llm
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama-data:/root/.ollama
+    networks:
+      - ai-net
 
-  # 2. FastAPI Ingestion Server
-  fastapi:
+  # 3. Real-Time Analytics Command Center
+  dashboard:
     build: .
-    container_name: analyzer-backend
     ports:
-      - "8000:8000"
-    volumes:
-      - .:/app
-    command: python src/main.py
+      - "8501:8501"
+    command: streamlit run src/dashboard/app.py --server.port=8501 --server.address=0.0.0.0
+    environment:
+      - BACKEND_API_URL=http://backend:8000
     depends_on:
-      - ollama-llm
-
-  # 3. Rust-based Log Shipper
-  vector:
-    build: .
-    container_name: analyzer-vector
-    volumes:
-      - .:/app
-    command: vector --config pipeline/vector.yaml
-    depends_on:
-      - fastapi
+      - backend
+    networks:
+      - web-net
 
   # 4. Mock Production Traffic Generator
   generator:
     build: .
-    container_name: analyzer-generator
-    volumes:
-      - .:/app
     command: python scripts/generator.py
-    depends_on:
-      - fastapi
-
-  # 5. Real-Time Analytics Command Center
-  dashboard:
-    build: .
-    container_name: analyzer-dashboard
-    ports:
-      - "8501:8501"
     volumes:
-      - .:/app
-    command: streamlit run src/dashboard/app.py --server.port=8501 --server.address=0.0.0.0
+      - shared-data:/app/data
+    networks:
+      - pipeline-net
+
+  # 5. Rust-based Log Shipper (Vector)
+  vector:
+    image: timberio/vector:0.38.0-alpine
+    working_dir: /app
+    volumes:
+      - ./pipeline/vector.yaml:/etc/vector/vector.yaml:ro
+      - shared-data:/app/data
+    environment:
+      - BACKEND_API_URL=http://backend:8000
     depends_on:
-      - fastapi
-      - ollama-llm
+      - backend
+      - generator
+    networks:
+      - pipeline-net
 
 volumes:
-  ollama_data:
+  shared-data:
+  ollama-data:
+
+networks:
+  pipeline-net:
+    driver: bridge
+  web-net:
+    driver: bridge
+  ai-net:
+    driver: bridge

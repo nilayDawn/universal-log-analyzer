@@ -1,25 +1,26 @@
+import logging
+import warnings
+
 import numpy as np
+from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 from sklearn.ensemble import IsolationForest
-from sentence_transformers import SentenceTransformer
-import warnings
+
+logger = logging.getLogger(__name__)
+
 warnings.filterwarnings("ignore")
 
-model = SentenceTransformer(
-    'all-MiniLM-L6-v2'
-)
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
 def run_semantic_detector(df):
+    logger.info("Running Detector 1: Semantic Pipeline (MiniLM -> PCA -> IF)...")
 
-    print(
-        "⏳ Running Detector 1: Semantic Pipeline (MiniLM -> PCA -> IF)..."
-    )
 
     if len(df) < 20:
-        print(
-            "⚠️ Not enough logs for semantic detection."
-        )
+        logger.warning("Not enough logs for semantic detection.")
         return np.ones(len(df))
+
 
     embeddings = model.encode(
         df['details'].tolist(),
