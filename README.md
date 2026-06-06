@@ -190,30 +190,27 @@ graph TD
 * **OS:** Windows (PowerShell), Linux, or macOS.
 * **Docker Engine:** Minimum 8GB system RAM allocated to containers (16GB recommended for rapid LLM inference).
 
-### Step 1: Pre-caching Core Model Weights
-
-To ensure seamless multi-container startup performance and prevent deployment timeout errors, initialize your local Docker volume with the Llama 3 weights before booting the network stack:
-
-```bash
-# Instantiate temporary setup context
-docker run -d -v ollama_data:/root/.ollama -p 11434:11434 --name parce-setup ollama/ollama:latest
-
-# Force-pull model parameters into local volume
-docker exec -it parce-setup ollama pull llama3
-
-# Clean up configuration container
-docker stop parce-setup
-docker rm parce-setup
-
-```
-
-### Step 2: Provisioning the Container Cluster
+### Step 1: Provisioning the Container Cluster
 
 Execute the environment cluster compilation directly via your terminal:
 
 ```bash
 docker compose up --build -d
 ```
+
+### Step 2: Download/Pull the Local LLM Model (Llama 3)
+
+Once the container cluster is up and running, download the Llama 3 model weights inside the Ollama container so they are cached in the persistent volume:
+
+```bash
+docker compose exec ollama ollama pull llama3
+```
+
+> [!NOTE]
+> If you are running **locally outside of Docker** (see the local development section below), make sure you have installed [Ollama](https://ollama.com) on your machine, start the Ollama service, and pull the model locally using:
+> ```bash
+> ollama pull llama3
+> ```
 
 **Note:** Vector natively ships logs to the backend container using Docker service discovery via the `http://backend:8000` endpoint.
 
@@ -225,7 +222,7 @@ docker compose up --build -d
      - Update `data_dir` to `"/var/lib/vector"` or a persistent local folder so Vector checkpoints survive restarts.
      - Update `include` paths to match your local repository format (e.g., `"data/mock_app.log"`).
 
-This single instruction compiles the optimized Python multi-stage environment, spins up the independent Rust streaming agent, connects the database hub, mounts active volumes, and initializes the command center dashboard.
+This compiles the optimized Python multi-stage environment, spins up the independent Rust streaming agent, connects the database hub, mounts active volumes, and initializes the command center dashboard.
 
 ### Step 3: Accessing the Systems Dashboard
 
