@@ -88,6 +88,7 @@ ENV/
 
 # Environment variables
 .env
+.venv_log_analyzer/**
 
 
 docs/**

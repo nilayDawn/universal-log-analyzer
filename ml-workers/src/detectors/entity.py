@@ -1,3 +1,7 @@
+# What it does: It pulls out and tracks specific objects or items hidden inside the text (like Block IDs, IP addresses, or Usernames)
+# Simple Example: It scans your logs, ignores the generic text, and isolates the specific entity blk_-78781211 or IP 10.251.73.220.
+# Why it matters: It allows you to cross-reference logs. For example, you can trace exactly what happened to one single data block across 5 different servers.
+
 import re
 from collections import defaultdict
 

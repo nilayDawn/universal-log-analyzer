@@ -43,6 +43,7 @@ def run_parser():
                     
                     # 1. Process log through Drain3
                     result = parse_log(raw_log)
+                    #print(f"[Parsed] Log: {raw_log} | Result: {result}")
                     cluster_id = str(result.get("cluster_id", "0"))
                     
                     if result.get("change_type") != "none":
@@ -54,6 +55,8 @@ def run_parser():
                         "cluster_id": cluster_id,
                         "raw_log": raw_log # Passed along for context gathering later
                     }
+                    #print(f"[Parsed] Pushing to ML stream: {parsed_payload}")
+
                     client.xadd(Config.REDIS_PARSED_STREAM_NAME, parsed_payload)
 
                     # 3. Acknowledge successful processing

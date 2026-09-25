@@ -15,7 +15,7 @@ def parse_hdfs_timestamp(line: str) -> datetime | None:
     if len(parts) >= 2:
         date_str = f"{parts[0]} {parts[1]}"
         try:
-            return datetime.strptime(date_str, TIMESTAMP_FORMAT)
+            return datetime.strptime(date_str, TIMESTAMP_FORMAT)        # '081109', '203615' ---> 2008-11-09 20:36:15
         except ValueError:
             return None
     return None
@@ -43,10 +43,10 @@ def run_simulator(log_file_path: str):
             current_timestamp = parse_hdfs_timestamp(line)
 
             if previous_timestamp and current_timestamp:
-                delta_seconds = (current_timestamp - previous_timestamp).total_seconds()
+                delta_seconds = (current_timestamp - previous_timestamp).total_seconds()    # 2008-11-09 20:38:07 - 2008-11-09 20:36:15 = 112.0 seconds
                 if delta_seconds > 0:
-                    scaled_sleep = delta_seconds / Config.SPEED_MULTIPLIER
-                    sleep_time = min(scaled_sleep, Config.MAX_SLEEP_SECONDS)
+                    scaled_sleep = delta_seconds / Config.SPEED_MULTIPLIER                   # 112.0 / 10 = 11.2 seconds
+                    sleep_time = min(scaled_sleep, Config.MAX_SLEEP_SECONDS)                 # 11.2 seconds > 1.5 seconds, so sleep_time = 1.5 seconds
                     time.sleep(sleep_time)
 
             previous_timestamp = current_timestamp
@@ -62,5 +62,12 @@ def run_simulator(log_file_path: str):
     print("[✓] Finished streaming log file.")
 
 if __name__ == "__main__":
-    data_path = os.path.join(os.path.dirname(__file__), "data", "HDFS.log")
-    run_simulator(data_path)
+    data_path = os.path.join(os.path.dirname(__file__), "data", "HDFS_2k.log")
+    run_simulator(data_path)    
+
+# sample op:
+# [Line 25] Pushed to stream log_stream (ID: 1790356210293-0)
+# [Line 26] Pushed to stream log_stream (ID: 1790356210597-0)
+# [Line 27] Pushed to stream log_stream (ID: 1790356211100-0)
+# [Line 28] Pushed to stream log_stream (ID: 1790356212604-0)
+# [Line 29] Pushed to stream log_stream (ID: 1790356214109-0)

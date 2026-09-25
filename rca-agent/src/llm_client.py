@@ -15,12 +15,19 @@ def generate_rca(block_id: str, context_logs: str) -> str:
     # The modern client automatically picks up GEMINI_API_KEY from the environment
     client = genai.Client()
     
+    # IMPROVED PROMPT: Clear instructions matching standard operational schema structures
     prompt = f"""
     You are an expert AIOps diagnosing agent. A critical anomaly has been detected for the HDFS entity: {block_id}.
-    Analyze the following chronological logs to determine the root cause of the failure.
+    Analyze the following chronological logs to determine the exact root cause of the failure.
     
     Logs:
     {context_logs}
+    
+    Instructions for your structured output fields:
+    - Assess whether this indicates a genuine hardware failure, network glitch, or normal routine execution.
+    - Provide a concise summary of the timeline of events leading up to the final log status.
+    - Quantify your confidence score regarding this assessment.
+    - Detail actionable remediation steps for system administrators.
     """
     
     try:
@@ -30,6 +37,7 @@ def generate_rca(block_id: str, context_logs: str) -> str:
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
                 response_schema=RootCauseAnalysis,
+                temperature=0.1
             ),
         )
         return response.text
