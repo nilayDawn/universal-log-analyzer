@@ -43,11 +43,19 @@ def run_parser():
                     
                     # 1. Process log through Drain3
                     result = parse_log(raw_log)
+                    cluster_id = str(result.get("cluster_id", "0"))
                     
-                    # 2. Print newly discovered templates to the terminal
                     if result.get("change_type") != "none":
-                        print(f"[New Template] ID: {result['cluster_id']} | Pattern: {result['template_mined']}")
+                        print(f"[New Template] ID: {cluster_id} | Pattern: {result['template_mined']}")
                     
+                    # 2. Push structured data to the ML stream
+                    parsed_payload = {
+                        "emitted_at": payload.get("emitted_at", 0),
+                        "cluster_id": cluster_id,
+                        "raw_log": raw_log # Passed along for context gathering later
+                    }
+                    client.xadd(Config.REDIS_PARSED_STREAM_NAME, parsed_payload)
+
                     # 3. Acknowledge successful processing
                     client.xack(Config.REDIS_STREAM_NAME, GROUP_NAME, msg_id)
                     
