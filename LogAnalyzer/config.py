@@ -19,3 +19,5 @@ class Config:
     )
 
     REDIS_STREAM_NAME = os.getenv("REDIS_STREAM_NAME", "log_stream")
+
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
