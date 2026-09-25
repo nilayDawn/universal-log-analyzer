@@ -95,3 +95,5 @@ data/**
 logs/**
 simulator/src/data/**
 ingestion/src/data/**
+logs_wal.db
+=0.1.0
