@@ -1,80 +1,15 @@
 services:
-  # 1. FastAPI Ingestion Server (Acts as the bridge)
-  backend:
-    build: .
+  redis:
+    image: redis:7-alpine
+    container_name: redis_broker
     ports:
-      - "8000:8000"
-    command: python src/main.py
-    environment:
-      - LOG_LEVEL=INFO
-      - FRONTEND_ORIGINS=*
-      - OLLAMA_URL=http://ollama:11434/api/generate
-    depends_on:
-      - ollama
-    networks:
-      - pipeline-net
-      - web-net
-      - ai-net
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes
     volumes:
-      - ./data:/app/data
-      - hf-cache:/root/.cache
-
-  # 2. Local AI Engine (Isolated)
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    networks:
-      - ai-net
-
-  # 3. Real-Time Analytics Command Center
-  dashboard:
-    build: .
-    ports:
-      - "8501:8501"
-    command: streamlit run src/dashboard/app.py --server.port=8501 --server.address=0.0.0.0
-    environment:
-      - BACKEND_API_URL=http://backend:8000
-    depends_on:
-      - backend
-    networks:
-      - web-net
-
-  # 4. Mock Production Traffic Generator
-  generator:
-    build: .
-    command: python scripts/generator.py
-    volumes:
-      - shared-data:/app/data
-    networks:
-      - pipeline-net
-
-  # 5. Rust-based Log Shipper (Vector)
-  vector:
-    image: timberio/vector:0.38.0-alpine
-    working_dir: /app
-    volumes:
-      - ./pipeline/vector.yaml:/etc/vector/vector.yaml:ro
-      - shared-data:/app/data
-    environment:
-      - BACKEND_API_URL=http://backend:8000
-    depends_on:
-      - backend
-      - generator
-    networks:
-      - pipeline-net
+      - redis_data:/data
+    restart: unless-stopped
+    env_file:
+      - .env
 
 volumes:
-  shared-data:
-  ollama-data:
-  hf-cache:
-
-networks:
-  pipeline-net:
-    driver: bridge
-  web-net:
-    driver: bridge
-  ai-net:
-    driver: bridge
+  redis_data:
