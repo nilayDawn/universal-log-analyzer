@@ -3,9 +3,17 @@ import os
 import redis
 from concurrent.futures import ThreadPoolExecutor
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+# 1. Append the project root to load standard modules
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(PROJECT_ROOT)
 from LogAnalyzer.config import Config
-from rca-agent.src.alert_handler import AlertOrchestrator
+
+# 2. Append the rca-agent/src folder directly to bypass the hyphen syntax issue
+RCA_AGENT_SRC = os.path.join(PROJECT_ROOT, "rca-agent", "src")
+sys.path.append(RCA_AGENT_SRC)
+
+# 3. Import AlertOrchestrator directly from the folder search path
+from alert_handler import AlertOrchestrator
 
 from detectors.novelty import NoveltyDetector
 from detectors.volume import VolumeDetector
